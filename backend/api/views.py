@@ -1,15 +1,11 @@
-from django.shortcuts import render
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import TokenObtainSerializer
-from rest_framework import filters, status, viewsets
-from django.utils.decorators import method_decorator
+from rest_framework import status, viewsets
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, ListModelMixin
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
-from .serializers import UserRegistrationSerializer, UserSerializer
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
+from .serializers import UserSerializer
 from rest_framework.response import Response
 
 

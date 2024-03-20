@@ -8,4 +8,3 @@ class Profile(AbstractUser):
     following = models.ManyToManyField(
         "self", blank=True, related_name="followers", symmetrical=False
     )
-

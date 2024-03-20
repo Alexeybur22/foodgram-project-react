@@ -11,7 +11,7 @@ from .constants import (
     MAX_FIRST_NAME_LENGTH,
     MAX_LAST_NAME_LENGTH,
     MAX_PASSWORD_LENGTH,
-    USERNAME_REGEX
+    USERNAME_REGEX,
 )
 
 
@@ -53,8 +53,6 @@ class TokenObtainSerializer(TokenObtainSerializer):
         return {'auth_token': str(self.get_token(self.user).access_token)}
 
 
-
-
 class UserSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField(
@@ -93,7 +91,8 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'email', 'id','username','first_name','last_name', 'is_subscribed'
+            'email', 'id', 'username',
+            'first_name', 'last_name', 'is_subscribed'
         )
 
     def get_is_subscribed(self, obj):
