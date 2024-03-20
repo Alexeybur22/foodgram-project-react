@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'djoser',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
@@ -80,18 +81,29 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly', 
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
+
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 6,
 }
 
 
-SIMPLE_JWT = {
-   'AUTH_HEADER_TYPES': ('Bearer',),
-} 
+DJOSER = {
+    'SERIALIZERS': {
+        'current_user': 'api.serializers.ProfileSerializer'
+    },
+    'PERMISSIONS': {
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user': ['rest_framework.permissions.AllowAny'],
+    },
+    'HIDE_USERS': False,
+    'LOGIN_FIELD': 'email',
+}
 
 
 # Database

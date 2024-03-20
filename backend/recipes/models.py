@@ -1,13 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.db import models
 from django.core.validators import MinValueValidator
+from django.db import models
 
-from api.constants import (
-    MAX_NAME_LENGTH,
-    MAX_HEX_COLOR_LENGTH,
-    MIN_COOKING_TIME,
-)
-
+from api.constants import (MAX_HEX_COLOR_LENGTH, MAX_NAME_LENGTH,
+                           MIN_COOKING_TIME)
 
 User = get_user_model()
 
@@ -16,42 +12,27 @@ class Recipe(models.Model):
     author = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='recipes',
+        related_name="recipes",
     )
 
-    name = models.CharField(
-        max_length=MAX_NAME_LENGTH
-    )
+    name = models.CharField(max_length=MAX_NAME_LENGTH)
 
     image = models.URLField()
 
-    text = models.TextField(
-        'Описание рецепта',
-        help_text='Добавьте описание рецепта'
-    )
+    text = models.TextField("Описание рецепта", help_text="Добавьте описание рецепта")
 
     ingredients = models.ForeignKey(
-        'Ingredient',
-        verbose_name='Ингредиенты',
-        on_delete=models.SET_NULL,
-        null=True
+        "Ingredient", verbose_name="Ингредиенты", on_delete=models.SET_NULL, null=True
     )
 
-    tags = models.ManyToManyField(
-        'Tag',
-        through='RecipeTag',
-        verbose_name='Теги'
-    )
+    tags = models.ManyToManyField("Tag", through="RecipeTag", verbose_name="Теги")
 
     cooking_time = models.PositiveSmallIntegerField(
-        verbose_name='Время приготовления, минут',
-        validators=[MinValueValidator(MIN_COOKING_TIME)]
+        verbose_name="Время приготовления, минут",
+        validators=[MinValueValidator(MIN_COOKING_TIME)],
     )
 
-    favorite = models.ManyToManyField(
-        User,
-        through='UserFavorite'
-    )
+    favorite = models.ManyToManyField(User, through="UserFavorite")
 
     def __str__(self):
         return self.title
@@ -73,39 +54,21 @@ class Tag(models.Model):
 
 class RecipeIngredient(models.Model):
 
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE
-    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
-    ingredient = models.ForeignKey(
-        Ingredient,
-        on_delete=models.CASCADE
-    )
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
 
 
 class RecipeTag(models.Model):
 
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE
-    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
-    tag = models.ForeignKey(
-        Tag,
-        on_delete=models.CASCADE
-    )
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
 
 class UserFavorite(models.Model):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='favorites'
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorites")
 
     recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        related_name='favorited_by'
+        Recipe, on_delete=models.CASCADE, related_name="favorited_by"
     )

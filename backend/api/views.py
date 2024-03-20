@@ -1,42 +1,39 @@
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import TokenObtainSerializer
-from rest_framework import status, viewsets
 from django.contrib.auth import get_user_model
-from rest_framework.decorators import action
-from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, ListModelMixin
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from .serializers import UserSerializer
-from rest_framework.response import Response
+from djoser.views import UserViewSet
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework import mixins, viewsets
 
+
+from .serializers import ProfileSerializer, TagSerializer, IngredientSerializer
+from recipes.models import Tag, Ingredient
 
 User = get_user_model()
 
 
-class TokenObtainViewSet(TokenObtainPairView):
-    """Представление для получения пользовательских JWT-токенов."""
+class ProfileViewSet(UserViewSet):
+    serializer_class = ProfileSerializer
 
-    serializer_class = TokenObtainSerializer
+    permission_classes = (IsAuthenticated,)
+
+    http_method_names = ['get', 'post']
 
 
-class UserViewSet(
-    CreateModelMixin,
-    RetrieveModelMixin,
-    ListModelMixin,
+class TagViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet
-):
-    
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+    ):
+    serializer_class = TagSerializer
+    queryset = Tag.objects.all()
+    pagination_class = None
 
 
-    @action(detail=False,
-            methods=('get'),
-            permission_classes=(IsAuthenticated,),
-            serializer_class=UserSerializer)
-    def me(self, request):
-        serializer = UserSerializer(request.user,
-                                       data=request.data,
-                                       partial=True)
-        serializer.is_valid(raise_exception=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+class IngredientViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+    ):
+    serializer_class = IngredientSerializer
+    queryset = Ingredient.objects.all()
+    pagination_class = None
