@@ -1,21 +1,42 @@
+import base64
+
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 from rest_framework import serializers, status
 from rest_framework.validators import UniqueValidator
 from djoser.serializers import UserSerializer
+from django.core.files.base import ContentFile
 
-from recipes.models import Ingredient, Tag
+from recipes.models import Ingredient, Tag, Recipe
 
-from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
-                        MAX_LAST_NAME_LENGTH, MAX_PASSWORD_LENGTH,
-                        MAX_USERNAME_LENGTH, USERNAME_REGEX)
+from .constants import (
+    MAX_EMAIL_LENGTH,
+    MAX_FIRST_NAME_LENGTH,
+    MAX_LAST_NAME_LENGTH,
+    MAX_PASSWORD_LENGTH,
+    MAX_USERNAME_LENGTH,
+    USERNAME_REGEX,
+)
 
 User = get_user_model()
 
 
+class Base64ImageField(serializers.ImageField):
+    def to_representation(self, data):
+        return super().to_representation(data)
+    
+
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')  
+            ext = format.split('/')[-1]  
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+
+        return super().to_internal_value(data)
+
+
 
 class ProfileSerializer(UserSerializer):
-
     email = serializers.EmailField(
         max_length=MAX_EMAIL_LENGTH,
         required=True,
@@ -63,7 +84,6 @@ class ProfileSerializer(UserSerializer):
         )
 
     def get_is_subscribed(self, obj):
-
         request = self.context.get("request", None)
         if request:
             current_user = request.user
@@ -91,7 +111,9 @@ class ProfileSerializer(UserSerializer):
                 )
             return existing_user_by_email
 
-        existing_user_by_username = User.objects.filter(username=username).first()
+        existing_user_by_username = User.objects.filter(
+            username=username
+        ).first()
 
         if existing_user_by_username:
             if existing_user_by_username.email != email:
@@ -118,11 +140,48 @@ class TagSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
 
+    amount = serializers.DecimalField(max_digits=6, decimal_places=2, write_only=True)
+
     class Meta:
-        fields = ("id", "name", "measurement_unit")
+        fields = ("id", "name", "measurement_unit", 'amount')
         model = Ingredient
 
 
 class RecipeSerializer(serializers.ModelSerializer):
 
     tags = TagSerializer(many=True)
+    author = ProfileSerializer(required=False)
+    ingredients = IngredientSerializer(many=True)
+    is_favorited = serializers.SerializerMethodField(required=False)
+    is_in_shopping_cart = serializers.SerializerMethodField(required=False)
+    image = Base64ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = Recipe
+        fields = '__all__'
+
+    def get_is_favorited(self, obj):
+        request = self.context.get("request", None)
+        if request:
+            current_user = request.user
+        try:
+            obj.is_favorited.get(id=current_user.id)
+            return True
+        except Exception:
+            return False
+        
+
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get("request", None)
+        if request:
+            current_user = request.user
+        try:
+            obj.in_shopping_cart.get(id=current_user.id)
+            return True
+        except Exception:
+            return False
+        
+    def create(self, validated_data):
+        print('val data', validated_data)
+        return Recipe(**validated_data)
+

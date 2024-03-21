@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-AUTH_USER_MODEL = "users.Profile"
+AUTH_USER_MODEL = "recipes.Profile"
 
 
 # Application definition
@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'djoser',
     'recipes.apps.RecipesConfig',
-    'users.apps.UsersConfig',
     'api.apps.ApiConfig',
 ]
 
