@@ -6,8 +6,9 @@ from rest_framework import serializers, status
 from rest_framework.validators import UniqueValidator
 from djoser.serializers import UserSerializer
 from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 
-from recipes.models import Ingredient, Tag, Recipe
+from recipes.models import Ingredient, Tag, Recipe, ProfileFavorite, IngredientAmount, RecipeTag
 
 from .constants import (
     MAX_EMAIL_LENGTH,
@@ -17,6 +18,7 @@ from .constants import (
     MAX_USERNAME_LENGTH,
     USERNAME_REGEX,
 )
+from .mixins import IngredientMixin
 
 User = get_user_model()
 
@@ -138,20 +140,27 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
 
 
-class IngredientSerializer(serializers.ModelSerializer):
+class IngredientSerializer(serializers.ModelSerializer, IngredientMixin):
 
-    amount = serializers.DecimalField(max_digits=6, decimal_places=2, write_only=True)
+    amount = serializers.SerializerMethodField()
 
-    class Meta:
-        fields = ("id", "name", "measurement_unit", 'amount')
-        model = Ingredient
+    def get_amount(self, obj):
+        recipe_id = self.context.get('recipe_id')
+        return IngredientAmount.objects.get(
+            recipe_id=recipe_id, ingredient_id=obj.id
+        ).amount
 
 
-class RecipeSerializer(serializers.ModelSerializer):
+class IngredientWriteSerializer(serializers.ModelSerializer, IngredientMixin):
+
+    amount = serializers.IntegerField(required=True, write_only=True)
+
+
+class RecipeReadSerializer(serializers.ModelSerializer):
 
     tags = TagSerializer(many=True)
     author = ProfileSerializer(required=False)
-    ingredients = IngredientSerializer(many=True)
+    ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField(required=False)
     is_in_shopping_cart = serializers.SerializerMethodField(required=False)
     image = Base64ImageField(required=False, allow_null=True)
@@ -169,7 +178,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             return True
         except Exception:
             return False
-        
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get("request", None)
@@ -181,7 +189,54 @@ class RecipeSerializer(serializers.ModelSerializer):
         except Exception:
             return False
         
-    def create(self, validated_data):
-        print('val data', validated_data)
-        return Recipe(**validated_data)
+    def get_ingredients(self, obj):
+        return IngredientSerializer(
+            obj.ingredients.all(), many=True, context={
+                'recipe_id': obj.id, 'method': self.context['request'].method
+            }
+        ).data
 
+
+class RecipeWriteSerializer(serializers.ModelSerializer):
+
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Tag.objects.all()
+    )
+    ingredients = IngredientWriteSerializer(many=True)
+    image = Base64ImageField(required=True)
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'ingredients', 'tags', 'image', 'name', 'text', 'cooking_time'
+        )
+
+    def create(self, validated_data):
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        request = self.context.get("request", None)
+        validated_data['author_id'] = request.user.id
+        recipe = Recipe.objects.create(**validated_data)
+
+        for ingredient, tag in zip(ingredients, tags):
+            amount = ingredient.pop('amount')
+            current_ingredient = Ingredient.objects.get(id=ingredient.pop('id'))
+
+            IngredientAmount.objects.create(
+                ingredient=current_ingredient,
+                recipe=recipe,
+                amount=amount
+            )
+            RecipeTag.objects.create(tag=tag, recipe=recipe)
+        return recipe
+
+    def to_representation(self, data):
+        return RecipeReadSerializer(
+            context=self.context
+        ).to_representation(data)
+
+
+class ProfileFavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('user', 'recipe')
+        model = ProfileFavorite

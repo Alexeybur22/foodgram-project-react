@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -51,12 +50,14 @@ class Recipe(models.Model):
         "Ingredient",
         verbose_name="Ингредиенты",
         related_name='used_in_recipes',
+        through='IngredientAmount'
     )
 
     tags = models.ManyToManyField(
         "Tag",
         verbose_name="Теги",
         related_name='used_in_recipes',
+        through='RecipeTag',
     )
 
     cooking_time = models.PositiveSmallIntegerField(
@@ -69,6 +70,7 @@ class Recipe(models.Model):
 
 
 class Ingredient(models.Model):
+
     name = models.CharField(max_length=MAX_NAME_LENGTH)
 
     measurement_unit = models.CharField(max_length=MAX_NAME_LENGTH)
@@ -100,9 +102,23 @@ class Tag(models.Model):
 #    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
 
-#class UserFavorite(models.Model):
-#    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorites")
-#
-#    recipe = models.ForeignKey(
-#        Recipe, on_delete=models.CASCADE, related_name="favorited_by"
-#    )
+class ProfileFavorite(models.Model):
+    user = models.ForeignKey(Profile, on_delete=models.CASCADE)
+
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE
+    )
+
+
+class IngredientAmount(models.Model):
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, blank=True)
+
+    amount = models.PositiveSmallIntegerField(blank=True, default=1)
+
+
+class RecipeTag(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
