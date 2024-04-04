@@ -1,15 +1,16 @@
 from django.contrib.auth import get_user_model
 from djoser.views import UserViewSet
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework import mixins, viewsets, status
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import HttpResponse
+from rest_framework.pagination import PageNumberPagination
 
 
 from .serializers import ProfileSerializer, TagSerializer, IngredientSerializer, IngredientinRecipeSerializer,  RecipeReadSerializer, ProfileFavoriteSerializer, RecipeWriteSerializer, FollowSerializer
-from recipes.models import Tag, Ingredient, Recipe
+from recipes.models import Tag, Ingredient, Recipe, ProfileFavorite
 
 User = get_user_model()
 
@@ -17,7 +18,7 @@ User = get_user_model()
 class ProfileViewSet(UserViewSet):
     serializer_class = ProfileSerializer
 
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
     http_method_names = ['get', 'post']
 
@@ -25,48 +26,57 @@ class ProfileViewSet(UserViewSet):
         detail=False,
         methods=('get',),
         permission_classes=(IsAuthenticated,),
+        pagination_class=PageNumberPagination,
     )
     def subscriptions(self, request):
         following = request.user.following
-        data = ProfileSerializer(following, many=True, context={'user': request.user}).data
-        for obj in data:
-            user_id = obj['id']
-            user = User.objects.get(id=user_id)
-            recipes = RecipeReadSerializer(
-                user.recipes, many=True,
-                fields=['id', 'name', 'image', 'cooking_time']
-            ).data
-            obj.update({'recipes': recipes, 'recipes_count': len(recipes)})
+        data = ProfileSerializer(
+            following, many=True, context={'user': request.user}, recipes=True
+        ).data
 
         return Response(data)
     
     @action(
         detail=True,
-        methods=('post', 'delete'),
+        methods=['post', 'delete'],
         permission_classes=(IsAuthenticated,),
+        http_method_names=['post', 'delete'],
     )
     def subscribe(self, request, id):
         follower = request.user
         user_to_follow = get_object_or_404(User, id=id)
 
+        if follower.id == user_to_follow.id:
+            return Response(
+                    {'error': 'Нельзя подписаться или отписаться от самого себя.'},
+                    status=status.HTTP_400_BAD_REQUEST
+            )
+
         if request.method == 'POST':
-            if follower.following.filter(id=user_to_follow.id):
+            if follower.following.filter(id=user_to_follow.id).exists():
                 return Response(
                         {'error': 'Вы уже подписаны на данного автора.'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            if follower.id == user_to_follow.id:
-                return Response(
-                        {'error': 'Нельзя подписаться на самого себя.'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
             follower.following.add(user_to_follow)
+            serializer = ProfileSerializer(
+                user_to_follow, context={'user': request.user}, recipes=True
+            )
             return Response(
-                        {'message': 'Подписка успешно создана.'},
-                        status=status.HTTP_201_CREATED
-                    )
-        #TODO add delete method and user info in response
-        return Response({'message':'OK'})
+                    serializer.data,
+                    status=status.HTTP_201_CREATED
+            )
+
+        if follower.following.filter(id=user_to_follow.id).exists():
+            follower.following.remove(user_to_follow)
+            return Response(
+                {'message': 'Подписка успешно отменена.'},
+                 status=status.HTTP_204_NO_CONTENT
+            )
+        return Response(
+            {'error': 'Невозможно отписаться от данного пользователя.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class TagViewSet(
@@ -118,12 +128,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite(self, request, pk):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        print(recipe)
-        recipe_serializer = RecipeReadSerializer(data=recipe)
-        recipe_serializer.is_valid(raise_exception=True)
-        is_favorite = recipe_serializer.data['is_favorite']
+        is_favorite = ProfileFavorite.objects.filter(
+            user=user, recipe=recipe
+        ).exists()
 
-        serializer = self.get_serializer(data={'user': user.pk, 'recipe': recipe.pk})
+        print('FAVORITE', is_favorite)
+
+        serializer = ProfileFavoriteSerializer(
+            data={'user': user.pk, 'recipe': recipe.pk}
+        )
         serializer.is_valid(raise_exception=True)
 
         if request.method == 'POST':
@@ -132,14 +145,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     {'error': 'Невозможно добавить рецепт в избранное.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            serializer.save()
+            user.favorite_recipes.add(recipe)
+#            serializer.save()
+
+            message_serializer = RecipeReadSerializer(recipe, fields=['id', 'name', 'image', 'cooking_time'])
             return Response(
-                    {
-                        'id': recipe_serializer.data['id'],
-                        'name': recipe_serializer.data['name'],
-                        'image': recipe_serializer.data['image'],
-                        'cooking_time': recipe_serializer.data['cooking_time']
-                    },
+                    message_serializer.data,
                     status=status.HTTP_201_CREATED
                 )
 
@@ -148,8 +159,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     {'error': 'Невозможно удалить рецепт из избранного.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        serializer.delete()
 
+        print(user.favorite_recipes.all())
+        user.favorite_recipes.remove(recipe)
         return Response(
             {'message':'Рецепт успешно удалён из избранного.'},
             status=status.HTTP_204_NO_CONTENT
@@ -216,11 +228,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_204_NO_CONTENT
             )
 
-        serializer = RecipeReadSerializer(recipe)
-
-        return Response({
-            'id': pk,
-            'name': recipe.name,
-            'image': serializer.data['image'],
-            'cooking_time': recipe.cooking_time
-        })
+        serializer = RecipeReadSerializer(
+                recipe,
+                fields=['id', 'name', 'image', 'cooking_time']
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED
+        )

@@ -38,6 +38,17 @@ class Base64ImageField(serializers.ImageField):
 
 
 class ProfileSerializer(UserSerializer):
+
+
+    def __init__(self, *args, **kwargs):
+        recipes = kwargs.pop('recipes', False)
+
+        super().__init__(*args, **kwargs)
+
+        if not recipes:
+            self.fields.pop('recipes')
+            self.fields.pop('recipes_count')
+
     email = serializers.EmailField(
         max_length=MAX_EMAIL_LENGTH,
         required=True,
@@ -72,6 +83,9 @@ class ProfileSerializer(UserSerializer):
 
     is_subscribed = serializers.SerializerMethodField(required=False)
 
+    recipes = serializers.SerializerMethodField(required=False)
+    recipes_count = serializers.SerializerMethodField(required=False)
+
     class Meta:
         model = User
         fields = (
@@ -82,6 +96,8 @@ class ProfileSerializer(UserSerializer):
             "last_name",
             "is_subscribed",
             "password",
+            "recipes",
+            "recipes_count",
         )
 
     def get_is_subscribed(self, obj):
@@ -128,6 +144,16 @@ class ProfileSerializer(UserSerializer):
         user = User.objects.create(**validated_data)
 
         return user
+
+    def get_recipes(self, obj):
+        recipes = RecipeReadSerializer(
+                obj.recipes, many=True,
+                fields=['id', 'name', 'image', 'cooking_time']
+        ).data
+        return recipes
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -290,7 +316,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
 class ProfileFavoriteSerializer(serializers.ModelSerializer):
 
-    recipe = RecipeReadSerializer()
+#    recipe = RecipeReadSerializer()
 
     class Meta:
         fields = ('user', 'recipe')
@@ -308,3 +334,20 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_user(self, obj):
         return obj.following.all()
+
+
+class UserWithRecipesSerializer(serializers.ModelSerializer):
+
+    recipes = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'recipes')
+        model = User
+
+    def get_recipes(self, obj):
+        recipes = RecipeReadSerializer(
+                obj.recipes, many=True,
+                fields=['id', 'name', 'image', 'cooking_time']
+        ).data
+        return recipes
+
