@@ -26,7 +26,6 @@ User = get_user_model()
 class Base64ImageField(serializers.ImageField):
     def to_representation(self, data):
         return super().to_representation(data)
-    
 
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
@@ -89,12 +88,10 @@ class ProfileSerializer(UserSerializer):
         request = self.context.get("request", None)
         if request:
             current_user = request.user
+        else:
+            current_user = self.context['user']
 
-        try:
-            obj.following.get(id=current_user.id)
-            return True
-        except Exception:
-            return False
+        return obj.followers.filter(id=current_user.id).exists()
 
     def create(self, validated_data):
         email = validated_data["email"]
@@ -140,7 +137,16 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
 
 
-class IngredientSerializer(serializers.ModelSerializer, IngredientMixin):
+class IngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = "__all__"
+        model = Ingredient
+
+
+class IngredientinRecipeSerializer(
+    serializers.ModelSerializer,
+    IngredientMixin
+):
 
     amount = serializers.SerializerMethodField()
 
@@ -157,6 +163,18 @@ class IngredientWriteSerializer(serializers.ModelSerializer, IngredientMixin):
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
+
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop('fields', None)
+
+        super().__init__(*args, **kwargs)
+
+        if fields is not None:
+
+            allowed = set(fields)
+            existing = set(self.fields)
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
 
     tags = TagSerializer(many=True)
     author = ProfileSerializer(required=False)
@@ -188,12 +206,14 @@ class RecipeReadSerializer(serializers.ModelSerializer):
             return True
         except Exception:
             return False
-        
+
     def get_ingredients(self, obj):
-        return IngredientSerializer(
-            obj.ingredients.all(), many=True, context={
-                'recipe_id': obj.id, 'method': self.context['request'].method
-            }
+        context = {'recipe_id': obj.id}
+        if self.context.get('request'):
+            context.update({'method': self.context.get('request').method})
+
+        return IngredientinRecipeSerializer(
+            obj.ingredients.all(), many=True, context=context
         ).data
 
 
@@ -228,7 +248,39 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 amount=amount
             )
             RecipeTag.objects.create(tag=tag, recipe=recipe)
+
         return recipe
+
+    def update(self, instance, validated_data):
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        request = self.context.get("request", None)
+        validated_data['author_id'] = request.user.id
+
+        IngredientAmount.objects.filter(recipe=instance).delete()
+        RecipeTag.objects.filter(recipe=instance).delete()
+
+        instance.image = validated_data['image']
+        instance.name = validated_data['name']
+        instance.text = validated_data['text']
+        instance.cooking_time = validated_data['cooking_time']
+
+        instance.save()
+
+        for ingredient, tag in zip(ingredients, tags):
+            amount = ingredient.pop('amount')
+            current_ingredient = Ingredient.objects.get(
+                id=ingredient.pop('id')
+            )
+
+            IngredientAmount.objects.create(
+                ingredient=current_ingredient,
+                recipe=instance,
+                amount=amount
+            )
+            RecipeTag.objects.create(tag=tag, recipe=instance)
+
+        return instance
 
     def to_representation(self, data):
         return RecipeReadSerializer(
@@ -237,6 +289,22 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
 
 class ProfileFavoriteSerializer(serializers.ModelSerializer):
+
+    recipe = RecipeReadSerializer()
+
     class Meta:
         fields = ('user', 'recipe')
         model = ProfileFavorite
+
+
+class FollowSerializer(serializers.ModelSerializer):
+
+    user = ProfileSerializer()
+    recipes = RecipeReadSerializer(many=True, fields=['id', 'name', 'image', 'cooking_time'])
+
+    class Meta:
+        fields = ('user', 'recipes')
+        model = User
+
+    def get_user(self, obj):
+        return obj.following.all()
