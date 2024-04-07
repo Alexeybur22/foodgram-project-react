@@ -1,9 +1,11 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
+from datetime import datetime
 
 from api.constants import (MAX_HEX_COLOR_LENGTH, MAX_NAME_LENGTH,
-                           MIN_COOKING_TIME)
+                           MIN_COOKING_TIME, MIN_AMOUNT)
+from .validators import validate_nonzero
 
 
 class Profile(AbstractUser):
@@ -31,7 +33,7 @@ class Profile(AbstractUser):
         verbose_name="Корзина покупок",
     )
 
-    REQUIRED_FIELDS = ["email", "first_name", "last_name"]
+    REQUIRED_FIELDS = ["email", "first_name", "last_name", "password"]
 
     def __str__(self):
         return self.username
@@ -44,6 +46,12 @@ class Profile(AbstractUser):
 class Recipe(models.Model):
     author = models.ForeignKey(
         Profile, on_delete=models.CASCADE, related_name="recipes", verbose_name="Автор"
+    )
+
+    pub_date = models.DateTimeField(
+        'Дата добавления',
+        auto_now_add=True,
+        db_index=True,
     )
 
     name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
@@ -59,6 +67,7 @@ class Recipe(models.Model):
         verbose_name="Ингредиенты",
         related_name="used_in_recipes",
         through="IngredientAmount",
+        blank=False
     )
 
     tags = models.ManyToManyField(
@@ -66,6 +75,7 @@ class Recipe(models.Model):
         verbose_name="Теги",
         related_name="used_in_recipes",
         through="RecipeTag",
+        blank=False,
     )
 
     cooking_time = models.PositiveSmallIntegerField(
@@ -74,11 +84,12 @@ class Recipe(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return f'{self.name} от {self.author}'
 
     class Meta:
         verbose_name = "Рецепт"
         verbose_name_plural = "Рецепты"
+        ordering = ('pub_date',)
 
 
 class Ingredient(models.Model):
@@ -90,7 +101,7 @@ class Ingredient(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return f'{self.name}, {self.measurement_unit}'
 
     class Meta:
         verbose_name = "Ингредиент"
@@ -139,13 +150,15 @@ class IngredientAmount(models.Model):
     )
 
     amount = models.PositiveSmallIntegerField(
-        blank=True, default=1, verbose_name="Количество"
+        blank=True, default=1, verbose_name="Количество",
+        validators=[MinValueValidator(MIN_AMOUNT)]
     )
 
     def __str__(self):
         return f"{self.ingredient}-{self.recipe}-{self.amount}"
 
     class Meta:
+        unique_together = ('recipe', 'ingredient')
         verbose_name = "Ингредиент — рецепт — количество"
         verbose_name_plural = "Ингредиенты — рецепты — количества"
 
@@ -159,5 +172,6 @@ class RecipeTag(models.Model):
         return f"{self.recipe}-{self.tag}"
 
     class Meta:
+        unique_together = ('recipe', 'tag')
         verbose_name = "Рецепт — тег"
         verbose_name_plural = "Рецепты — теги"

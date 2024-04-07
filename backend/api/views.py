@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
@@ -14,37 +15,44 @@ from recipes.models import Ingredient, ProfileFavorite, Recipe, Tag
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
-                          TagSerializer)
+                          TagSerializer, ProfileCreateSerializer)
+from .validators import nonexistent_recipe, delete_nonexistent_recipe
+from .permissions import IsAuthorOrReadOnly
 
 User = get_user_model()
 
 
 class ProfileViewSet(UserViewSet):
-    serializer_class = ProfileSerializer
-
-    permission_classes = (IsAuthenticatedOrReadOnly,)
 
     http_method_names = ["get", "post"]
+    pagination_class = LimitOffsetPagination
+    serializer_class = ProfileSerializer
+
 
     @action(
         detail=False,
         methods=("get",),
         permission_classes=(IsAuthenticated,),
-        pagination_class=PageNumberPagination,
     )
     def subscriptions(self, request):
-        following = request.user.following
-        data = ProfileSerializer(
-            following, many=True, context={"user": request.user}, recipes=True
-        ).data
+        following = request.user.following.all()
+        page = self.paginate_queryset(following)
 
-        return Response(data)
+        serializer = self.get_serializer(
+                following, many=True, context={"user": request.user}, recipes=True
+        )
+
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+
+        return Response(serializer.data)
 
     @action(
         detail=True,
         methods=["post", "delete"],
         permission_classes=(IsAuthenticated,),
         http_method_names=["post", "delete"],
+        pagination_class = LimitOffsetPagination,
     )
     def subscribe(self, request, id):
         follower = request.user
@@ -63,7 +71,7 @@ class ProfileViewSet(UserViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             follower.following.add(user_to_follow)
-            serializer = ProfileSerializer(
+            serializer = self.serializer_class(
                 user_to_follow, context={"user": request.user}, recipes=True
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -78,11 +86,28 @@ class ProfileViewSet(UserViewSet):
             {"error": "Невозможно отписаться от данного пользователя."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    @action(
+        detail=False,
+        methods=["get",],
+        permission_classes=(IsAuthenticated,)
+    )
+    def me(self, request):
+        print(request)
+        serializer = self.serializer_class(
+            request.user,
+            context={
+                "user": request.user
+            }
+        )
+        return Response(serializer.data)
 
 
 class TagViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('name',) 
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     pagination_class = None
@@ -91,6 +116,8 @@ class TagViewSet(
 class IngredientViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('name',) 
     queryset = Ingredient.objects.all()
     pagination_class = None
 
@@ -111,6 +138,10 @@ class IngredientViewSet(
 class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeReadSerializer
     queryset = Recipe.objects.all()
+    pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('tags__name', 'name', 'author', 'is_favorited',) 
+    permission_classes = (IsAuthorOrReadOnly,)
 
     def get_serializer_class(self):
         if self.action in ("list", "retrieve"):
@@ -126,10 +157,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        is_favorite = ProfileFavorite.objects.filter(user=user, recipe=recipe).exists()
+        if request.method == "POST":
+            nonexistent_recipe(pk)
+        else:
+            delete_nonexistent_recipe(pk)
 
-        print("FAVORITE", is_favorite)
+        recipe = Recipe.objects.get(id=pk)
+        is_favorite = ProfileFavorite.objects.filter(user=user, recipe=recipe).exists()
 
         serializer = ProfileFavoriteSerializer(
             data={"user": user.pk, "recipe": recipe.pk}
@@ -143,12 +177,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             user.favorite_recipes.add(recipe)
-            #            serializer.save()
 
             message_serializer = RecipeReadSerializer(
                 recipe, fields=["id", "name", "image", "cooking_time"]
             )
             return Response(message_serializer.data, status=status.HTTP_201_CREATED)
+
 
         if not is_favorite:
             return Response(
@@ -156,7 +190,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        print(user.favorite_recipes.all())
         user.favorite_recipes.remove(recipe)
         return Response(
             {"message": "Рецепт успешно удалён из избранного."},
@@ -201,6 +234,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer_class=RecipeReadSerializer,
     )
     def shopping_cart(self, request, pk):
+
+        if request.method == "POST":
+            nonexistent_recipe(pk)
+        else:
+            delete_nonexistent_recipe(pk)
+
         recipe = Recipe.objects.get(id=pk)
         is_in_cart = request.user.shopping_cart.filter(id=pk).exists()
 
