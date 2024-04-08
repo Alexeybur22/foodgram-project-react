@@ -38,12 +38,20 @@ class ProfileViewSet(UserViewSet):
         following = request.user.following.all()
         page = self.paginate_queryset(following)
 
+        recipes_limit = request.query_params.get('recipes_limit')
+
         serializer = self.get_serializer(
                 following, many=True, context={"user": request.user}, recipes=True
         )
 
         if page is not None:
-            return self.get_paginated_response(serializer.data)
+            data = serializer.data
+            if recipes_limit:
+                for object in data:
+                    recipes = object['recipes']
+                    if recipes:
+                        object['recipes'] = recipes[:int(recipes_limit)]
+            return self.get_paginated_response(data)
 
         return Response(serializer.data)
 
@@ -57,6 +65,7 @@ class ProfileViewSet(UserViewSet):
     def subscribe(self, request, id):
         follower = request.user
         user_to_follow = get_object_or_404(User, id=id)
+        recipes_limit = request.query_params.get('recipes_limit')
 
         if follower.id == user_to_follow.id:
             return Response(
@@ -74,7 +83,12 @@ class ProfileViewSet(UserViewSet):
             serializer = self.serializer_class(
                 user_to_follow, context={"user": request.user}, recipes=True
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            data = serializer.data
+            recipes = data['recipes']
+            if recipes_limit and recipes:
+                data['recipes'] = recipes[:int(recipes_limit)]
+
+            return Response(data, status=status.HTTP_201_CREATED)
 
         if follower.following.filter(id=user_to_follow.id).exists():
             follower.following.remove(user_to_follow)
