@@ -157,10 +157,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk):
         user = request.user
-        if request.method == "POST":
-            nonexistent_recipe(pk)
-        else:
-            delete_nonexistent_recipe(pk)
+
+        if not Recipe.objects.filter(id=pk).exists():
+            message = {"error": "Несуществующий рецепт"}
+            if request.method == "POST":
+                return Response(
+                    message,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                return Response(
+                    message,
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         recipe = Recipe.objects.get(id=pk)
         is_favorite = ProfileFavorite.objects.filter(user=user, recipe=recipe).exists()
@@ -235,10 +244,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk):
 
-        if request.method == "POST":
-            nonexistent_recipe(pk)
-        else:
-            delete_nonexistent_recipe(pk)
+        if not Recipe.objects.filter(id=pk).exists():
+            message = {"error": "Несуществующий рецепт"}
+            if request.method == "POST":
+                return Response(
+                    message,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                return Response(
+                    message,
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
 
         recipe = Recipe.objects.get(id=pk)
         is_in_cart = request.user.shopping_cart.filter(id=pk).exists()

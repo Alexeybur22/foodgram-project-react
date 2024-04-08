@@ -3,6 +3,11 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 
 
+class NotFoundError(serializers.ValidationError):
+    def __init__(self, detail):
+        super().__init__(detail, code=404)
+
+
 def repetitive_values(ingredients, tags):
 
     ingredient_ids = [ingredient['id'] for ingredient in ingredients]
@@ -36,10 +41,7 @@ def nonexistent_recipe(pk):
 
 def delete_nonexistent_recipe(pk):
     if not Recipe.objects.filter(id=pk).exists():
-        raise serializers.ValidationError(
-            {"error": "Несуществующий рецепт."},
-            code=status.HTTP_404_NOT_FOUND,
-        )
+        raise NotFoundError({'detail': 'Несуществующий рецепт.'})
 
     
 def check_amount(amount):

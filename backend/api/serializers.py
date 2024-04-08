@@ -266,6 +266,14 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         return IngredientinRecipeSerializer(
             obj.ingredients.all(), many=True, context=context
         ).data
+    
+#    def validate_shopping_cart(self, pk):
+#        if not Recipe.objects.filter(id=pk).exists():
+#            if self.request.method == 'POST':
+#                pass
+#            else:
+#                pass
+
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
