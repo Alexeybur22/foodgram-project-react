@@ -33,6 +33,7 @@ class ProfileViewSet(UserViewSet):
         detail=False,
         methods=("get",),
         permission_classes=(IsAuthenticated,),
+        pagination_class = LimitOffsetPagination
     )
     def subscriptions(self, request):
         following = request.user.following.all()
@@ -41,10 +42,11 @@ class ProfileViewSet(UserViewSet):
         recipes_limit = request.query_params.get('recipes_limit')
 
         serializer = self.get_serializer(
-                following, many=True, context={"user": request.user}, recipes=True
+                page, many=True, context={"user": request.user}, recipes=True
         )
 
         if page is not None:
+            print('\n\n\nPAGE', page)
             data = serializer.data
             if recipes_limit:
                 for object in data:
@@ -168,6 +170,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=("post", "delete"),
         permission_classes=(IsAuthenticated,),
         serializer_class=ProfileFavoriteSerializer,
+#        filter_backends=None
     )
     def favorite(self, request, pk):
         user = request.user
@@ -223,6 +226,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=("get",),
         permission_classes=(IsAuthenticated,),
+#        filter_backends=None
     )
     def download_shopping_cart(self, request):
         serializer = RecipeReadSerializer(request.user.shopping_cart.all(), many=True, fields=['id', 'ingredients'])
@@ -255,6 +259,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=("post", "delete"),
         permission_classes=(IsAuthenticated,),
         serializer_class=RecipeReadSerializer,
+#        filter_backends=None,
     )
     def shopping_cart(self, request, pk):
 
