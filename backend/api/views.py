@@ -225,7 +225,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
     )
     def download_shopping_cart(self, request):
-        serializer = RecipeReadSerializer(request.user.shopping_cart.all(), many=True)
+        serializer = RecipeReadSerializer(request.user.shopping_cart.all(), many=True, fields=['id', 'ingredients'])
 
         shopping_cart = dict()
 
