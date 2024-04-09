@@ -230,8 +230,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     author = ProfileSerializer(required=False)
     ingredients = serializers.SerializerMethodField()
-    is_favorited = serializers.SerializerMethodField(required=False)
-    is_in_shopping_cart = serializers.SerializerMethodField(required=False)
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
     image = Base64ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -253,7 +253,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         if request:
             current_user = request.user
         try:
-            obj.in_shopping_cart.get(id=current_user.id)
+            obj.is_in_shopping_cart.get(id=current_user.id)
             return True
         except Exception:
             return False
@@ -266,14 +266,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         return IngredientinRecipeSerializer(
             obj.ingredients.all(), many=True, context=context
         ).data
-    
-#    def validate_shopping_cart(self, pk):
-#        if not Recipe.objects.filter(id=pk).exists():
-#            if self.request.method == 'POST':
-#                pass
-#            else:
-#                pass
-
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):

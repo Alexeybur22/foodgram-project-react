@@ -28,7 +28,7 @@ class Profile(AbstractUser):
     )
     shopping_cart = models.ManyToManyField(
         "Recipe",
-        related_name="in_shopping_cart",
+        related_name="is_in_shopping_cart",
         blank=True,
         verbose_name="Корзина покупок",
     )

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, BooleanFilter
 from djoser.views import UserViewSet
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -18,6 +18,8 @@ from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           TagSerializer, ProfileCreateSerializer)
 from .validators import nonexistent_recipe, delete_nonexistent_recipe
 from .permissions import IsAuthorOrReadOnly
+from .filters import RecipeFilterSet
+
 
 User = get_user_model()
 
@@ -46,7 +48,6 @@ class ProfileViewSet(UserViewSet):
         )
 
         if page is not None:
-            print('\n\n\nPAGE', page)
             data = serializer.data
             if recipes_limit:
                 for object in data:
@@ -109,7 +110,6 @@ class ProfileViewSet(UserViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def me(self, request):
-        print(request)
         serializer = self.serializer_class(
             request.user,
             context={
@@ -152,12 +152,14 @@ class IngredientViewSet(
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    serializer_class = RecipeReadSerializer
     queryset = Recipe.objects.all()
     pagination_class = LimitOffsetPagination
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('tags__name', 'name', 'author', 'is_favorited',) 
+#    filter_backends = (DjangoFilterBackend,)
+    serializer_class = RecipeReadSerializer
+    filterset_class = RecipeFilterSet
+#    filterset_fields = ('name', 'author', 'tags')
     permission_classes = (IsAuthorOrReadOnly,)
+
 
     def get_serializer_class(self):
         if self.action in ("list", "retrieve"):
@@ -191,7 +193,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = Recipe.objects.get(id=pk)
         is_favorite = ProfileFavorite.objects.filter(user=user, recipe=recipe).exists()
 
-        serializer = ProfileFavoriteSerializer(
+        serializer = self.serializer_class(
             data={"user": user.pk, "recipe": recipe.pk}
         )
         serializer.is_valid(raise_exception=True)
@@ -226,7 +228,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=("get",),
         permission_classes=(IsAuthenticated,),
-#        filter_backends=None
     )
     def download_shopping_cart(self, request):
         serializer = RecipeReadSerializer(request.user.shopping_cart.all(), many=True, fields=['id', 'ingredients'])
@@ -259,7 +260,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=("post", "delete"),
         permission_classes=(IsAuthenticated,),
         serializer_class=RecipeReadSerializer,
-#        filter_backends=None,
     )
     def shopping_cart(self, request, pk):
 
