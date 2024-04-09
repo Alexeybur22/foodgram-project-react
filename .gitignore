@@ -9,6 +9,9 @@ __pycache__/
 # Mediafiles
 media/
 
+# Docs
+infra/docker-compose.yml
+
 
 # Distribution / packaging
 .Python
