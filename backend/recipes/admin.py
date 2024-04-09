@@ -31,10 +31,7 @@ class RecipeTagInline(admin.StackedInline):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    inlines = (
-        IngredientAmountInline,
-        RecipeTagInline
-    )
+    inlines = (IngredientAmountInline, RecipeTagInline)
     list_filter = ("author", "name", "tags")
     list_display = (
         "author",
@@ -42,13 +39,13 @@ class RecipeAdmin(admin.ModelAdmin):
         "image",
         "text",
         "cooking_time",
-        "show_number_favorite"
+        "show_number_favorite",
     )
-    list_display_links = ('name',)
+    list_display_links = ("name",)
 
     def show_number_favorite(self, obj):
         return obj.is_favorited.count()
-    
+
     show_number_favorite.short_description = "Добавлено в избранное"
 
 

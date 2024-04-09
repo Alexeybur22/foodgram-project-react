@@ -11,6 +11,7 @@ coreschema==0.0.4
 cryptography==42.0.5
 defusedxml==0.8.0rc2
 Django==3.2.16
+django-filter==23.5
 django-templated-mail==1.1.1
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.2
@@ -42,5 +43,6 @@ six==1.16.0
 social-auth-app-django==4.0.0
 social-auth-core==4.5.3
 sqlparse==0.4.4
+tzdata==2024.1
 uritemplate==4.1.1
 urllib3==2.2.1
