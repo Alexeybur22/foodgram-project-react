@@ -27,7 +27,7 @@ packaging==24.0
 pathspec==0.12.1
 pillow==10.2.0
 platformdirs==4.2.0
-pycodestyle==2.10.1
+pycodestyle==2.10.0
 pycparser==2.21
 pyflakes==3.2.0
 PyJWT==2.8.0
