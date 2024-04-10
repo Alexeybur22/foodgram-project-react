@@ -27,7 +27,7 @@ services:
     volumes:
       - static:/frontend_static
   gateway:
-    build: ./nginx/
+    build: ./infra/
     env_file: .env
     ports:
       - 8080:80
