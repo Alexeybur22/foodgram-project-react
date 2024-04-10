@@ -4,7 +4,8 @@ from django.forms.fields import MultipleChoiceField
 from django_filters.filters import Filter
 from recipes.models import Recipe, Tag
 
-known_tags = set(Tag.objects.values_list("slug", flat=True))
+#known_tags = set(Tag.objects.values_list("slug", flat=True))
+known_tags = ''
 TAG_CHOICES = [(tag, tag) for tag in known_tags]
 
 
