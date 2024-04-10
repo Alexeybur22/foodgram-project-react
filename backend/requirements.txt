@@ -16,7 +16,6 @@ django-templated-mail==1.1.1
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.2
 djoser==2.1.0
-gunicorn==20.0.4
 idna==3.6
 itypes==1.2.0
 Jinja2==3.1.3
