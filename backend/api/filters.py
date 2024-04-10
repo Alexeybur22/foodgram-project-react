@@ -2,7 +2,6 @@ import django_filters
 from django.db.models import Q
 from django.forms.fields import MultipleChoiceField
 from django_filters.filters import Filter
-
 from recipes.models import Recipe, Tag
 
 known_tags = Tag.objects.values_list("slug", flat=True).distinct()

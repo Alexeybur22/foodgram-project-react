@@ -1,9 +1,8 @@
+from api.constants import (MAX_HEX_COLOR_LENGTH, MAX_NAME_LENGTH, MIN_AMOUNT,
+                           MIN_COOKING_TIME)
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
-
-from api.constants import (MAX_HEX_COLOR_LENGTH, MAX_NAME_LENGTH, MIN_AMOUNT,
-                           MIN_COOKING_TIME)
 
 
 class Profile(AbstractUser):

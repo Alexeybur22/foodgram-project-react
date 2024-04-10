@@ -3,20 +3,19 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
+from recipes.models import Ingredient, ProfileFavorite, Recipe, Tag
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from recipes.models import Ingredient, ProfileFavorite, Recipe, Tag
-
 from .filters import RecipeFilterSet
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
-                          ProfileFavoriteSerializer,
-                          ProfileSerializer, RecipeReadSerializer,
-                          RecipeWriteSerializer, TagSerializer)
+                          ProfileFavoriteSerializer, ProfileSerializer,
+                          RecipeReadSerializer, RecipeWriteSerializer,
+                          TagSerializer)
 
 User = get_user_model()
 

@@ -4,15 +4,14 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
+from recipes.models import (Ingredient, IngredientAmount, ProfileFavorite,
+                            Recipe, RecipeTag, Tag)
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from recipes.models import (Ingredient, IngredientAmount, ProfileFavorite,
-                            Recipe, RecipeTag, Tag)
-
 from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
-                        MAX_LAST_NAME_LENGTH,
-                        MAX_USERNAME_LENGTH, USERNAME_REGEX)
+                        MAX_LAST_NAME_LENGTH, MAX_USERNAME_LENGTH,
+                        USERNAME_REGEX)
 from .mixins import IngredientMixin
 from .validators import (check_amount, empty_values, nonexistent_values,
                          repetitive_values)
