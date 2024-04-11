@@ -3,15 +3,20 @@ from django.db.models import Q
 from recipes.models import Recipe, Tag
 
 
+def get_tag_choices():
+    choices = [
+        (tag, tag) for tag in Tag.objects.values_list(
+            "slug", flat=True
+        ).distinct()
+    ]
+    return choices
+
+
 class RecipeFilterSet(django_filters.FilterSet):
 
     tags = django_filters.MultipleChoiceFilter(
         field_name="tags__slug",
-        choices=[
-            (tag, tag) for tag in Tag.objects.values_list(
-                "slug", flat=True
-            ).distinct()
-        ]
+        choices=get_tag_choices()
     )
     is_favorited = django_filters.NumberFilter(
         field_name="is_favorited", method="get_is_favorited"
