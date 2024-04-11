@@ -2,7 +2,6 @@ import django_filters
 from django.db.models import Q
 from recipes.models import Recipe, Tag
 
-
 known_tags = set(Tag.objects.values_list("slug", flat=True))
 if known_tags:
     TAG_CHOICES = [(tag, tag) for tag in known_tags]
