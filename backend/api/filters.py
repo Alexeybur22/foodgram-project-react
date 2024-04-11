@@ -16,7 +16,7 @@ class RecipeFilterSet(django_filters.FilterSet):
 
     tags = django_filters.MultipleChoiceFilter(
         field_name="tags__slug",
-        choices=get_tag_choices()
+        queryset=Tag.objects.all()
     )
     is_favorited = django_filters.NumberFilter(
         field_name="is_favorited", method="get_is_favorited"
