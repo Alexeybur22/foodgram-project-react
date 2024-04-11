@@ -15,6 +15,7 @@ django-filter==23.5
 django-templated-mail==1.1.1
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.2
+django-cors-headers==3.13.0
 djoser==2.1.0
 idna==3.6
 itypes==1.2.0
@@ -27,7 +28,7 @@ packaging==24.0
 pathspec==0.12.1
 pillow==10.2.0
 platformdirs==4.2.0
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.9
 pycodestyle==2.10.0
 pycparser==2.21
 pyflakes==3.2.0
