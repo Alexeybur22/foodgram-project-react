@@ -14,9 +14,10 @@ def get_tag_choices():
 
 class RecipeFilterSet(django_filters.FilterSet):
 
-    tags = django_filters.MultipleChoiceFilter(
-        field_name="tags__slug",
-        queryset=Tag.objects.all()
+    tags = django_filters.ModelMultipleChoiceFilter(
+        queryset=Tag.objects.all(),
+        field_name='tags__slug',
+        to_field_name='slug'
     )
     is_favorited = django_filters.NumberFilter(
         field_name="is_favorited", method="get_is_favorited"
