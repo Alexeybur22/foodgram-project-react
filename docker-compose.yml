@@ -35,4 +35,4 @@ services:
     volumes:
       - static_foodgram:/staticfiles
       - media_foodgram:/media/
-      - /docs/:/usr/share/nginx/html/api/docs/
+      - ../docs/:/usr/share/nginx/html/api/docs/

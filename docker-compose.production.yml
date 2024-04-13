@@ -4,7 +4,6 @@ volumes:
   pg_data_production_foodgram:
   static_volume_foodgram:
   media_volume_foodgram:
-  docs:
 
 services:
   db:
@@ -35,6 +34,6 @@ services:
     volumes:
       - static_volume_foodgram:/staticfiles/
       - media_volume_foodgram:/media/
-      - /docs/:/usr/share/nginx/html/api/docs/
+      - ../docs/:/usr/share/nginx/html/api/docs/
     depends_on:
       - db
