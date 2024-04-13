@@ -1,12 +1,11 @@
 from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
-
 from recipes.models import Ingredient, IngredientAmount
 from recipes.models import Profile as User
 from recipes.models import ProfileFavorite, Recipe, RecipeTag, Tag
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
                         MAX_LAST_NAME_LENGTH, MAX_USERNAME_LENGTH,
