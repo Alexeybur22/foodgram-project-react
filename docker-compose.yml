@@ -30,7 +30,7 @@ services:
     build: ./infra/
     env_file: .env
     ports:
-      - 8080:80
+      - 80:80
     volumes:
       - static_foodgram:/staticfiles
       - media_foodgram:/media/
