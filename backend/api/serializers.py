@@ -1,13 +1,12 @@
-import base64
-
-from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from recipes.models import (Ingredient, IngredientAmount, ProfileFavorite,
-                            Recipe, RecipeTag, Tag)
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
+from recipes.models import Ingredient, IngredientAmount
+from recipes.models import Profile as User
+from recipes.models import ProfileFavorite, Recipe, RecipeTag, Tag
 
 from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
                         MAX_LAST_NAME_LENGTH, MAX_USERNAME_LENGTH,
@@ -15,21 +14,6 @@ from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
 from .mixins import IngredientMixin
 from .validators import (check_amount, empty_values, nonexistent_values,
                          repetitive_values)
-
-User = get_user_model()
-
-
-class Base64ImageField(serializers.ImageField):
-    def to_representation(self, data):
-        return super().to_representation(data)
-
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith("data:image"):
-            format, imgstr = data.split(";base64,")
-            ext = format.split("/")[-1]
-            data = ContentFile(base64.b64decode(imgstr), name="temp." + ext)
-
-        return super().to_internal_value(data)
 
 
 class ProfileSerializer(UserSerializer):
@@ -146,6 +130,13 @@ class IngredientWriteSerializer(serializers.ModelSerializer, IngredientMixin):
 
 class RecipeReadSerializer(serializers.ModelSerializer):
 
+    tags = TagSerializer(many=True)
+    author = ProfileSerializer(required=False)
+    ingredients = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+    image = Base64ImageField(required=False, allow_null=True)
+
     def __init__(self, *args, **kwargs):
         fields = kwargs.pop("fields", None)
 
@@ -158,36 +149,23 @@ class RecipeReadSerializer(serializers.ModelSerializer):
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
 
-    tags = TagSerializer(many=True)
-    author = ProfileSerializer(required=False)
-    ingredients = serializers.SerializerMethodField()
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
-    image = Base64ImageField(required=False, allow_null=True)
-
     class Meta:
         model = Recipe
         exclude = ("pub_date",)
 
     def get_is_favorited(self, obj):
-        request = self.context.get("request", None)
+        request = self.context.get("request")
         if request:
             current_user = request.user
-        try:
-            obj.is_favorited.get(id=current_user.id)
-            return True
-        except Exception:
-            return False
+
+        return obj.is_favorited.filter(id=current_user.id).exists()
 
     def get_is_in_shopping_cart(self, obj):
-        request = self.context.get("request", None)
+        request = self.context.get("request")
         if request:
             current_user = request.user
-        try:
-            obj.is_in_shopping_cart.get(id=current_user.id)
-            return True
-        except Exception:
-            return False
+
+        return obj.is_in_shopping_cart.filter(id=current_user.id).exists()
 
     def get_ingredients(self, obj):
         context = {"recipe_id": obj.id}
@@ -218,6 +196,29 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             "cooking_time"
         )
 
+    @staticmethod
+    def add_ingredients_tags(ingredients, tags, recipe):
+        bulk_ingredientamount_list = list()
+        bulk_recipetag_list = list()
+        for ingredient, tag in zip(ingredients, tags):
+            amount = ingredient.pop("amount")
+            check_amount(amount)
+            nonexistent_values(ingredient)
+            current_ingredient = Ingredient.objects.get(
+                id=ingredient.pop("id")
+            )
+
+            bulk_ingredientamount_list.append(
+                IngredientAmount(
+                    ingredient=current_ingredient, recipe=recipe, amount=amount
+                )
+            )
+            bulk_recipetag_list.append(
+                RecipeTag(tag=tag, recipe=recipe)
+            )
+        IngredientAmount.objects.bulk_create(bulk_ingredientamount_list)
+        RecipeTag.objects.bulk_create(bulk_recipetag_list)
+
     def create(self, validated_data):
         ingredients = validated_data.pop("ingredients", None)
         tags = validated_data.pop("tags", None)
@@ -228,17 +229,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         validated_data["author_id"] = request.user.id
         recipe = Recipe.objects.create(**validated_data)
 
-        for ingredient, tag in zip(ingredients, tags):
-            amount = ingredient.pop("amount")
-            check_amount(amount)
-            nonexistent_values(ingredient)
-            current_ingredient = Ingredient.objects.get(
-                id=ingredient.pop("id")
-            )
-            IngredientAmount.objects.create(
-                ingredient=current_ingredient, recipe=recipe, amount=amount
-            )
-            RecipeTag.objects.create(tag=tag, recipe=recipe)
+        self.add_ingredients_tags(ingredients, tags, recipe)
 
         return recipe
 
@@ -255,24 +246,11 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         IngredientAmount.objects.filter(recipe=instance).delete()
         RecipeTag.objects.filter(recipe=instance).delete()
 
-        instance.image = validated_data["image"]
-        instance.name = validated_data["name"]
-        instance.text = validated_data["text"]
-        instance.cooking_time = validated_data["cooking_time"]
+        super().update(instance, validated_data)
 
         instance.save()
 
-        for ingredient, tag in zip(ingredients, tags):
-            amount = ingredient.pop("amount")
-            check_amount(amount)
-            nonexistent_values(ingredient)
-            current_ingredient = Ingredient.objects.get(
-                id=ingredient.pop("id")
-            )
-            IngredientAmount.objects.create(
-                ingredient=current_ingredient, recipe=instance, amount=amount
-            )
-            RecipeTag.objects.create(tag=tag, recipe=instance)
+        self.add_ingredients_tags(ingredients, tags, instance)
 
         return instance
 

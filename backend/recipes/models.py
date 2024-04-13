@@ -1,8 +1,9 @@
-from api.constants import (MAX_HEX_COLOR_LENGTH, MAX_NAME_LENGTH, MIN_AMOUNT,
-                           MIN_COOKING_TIME)
+from colorfield.fields import ColorField
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from api.constants import MAX_NAME_LENGTH, MIN_AMOUNT, MIN_COOKING_TIME
 
 
 class Profile(AbstractUser):
@@ -117,9 +118,7 @@ class Tag(models.Model):
         max_length=MAX_NAME_LENGTH, verbose_name="Название"
     )
 
-    color = models.CharField(
-        max_length=MAX_HEX_COLOR_LENGTH, verbose_name="Цветовой код"
-    )
+    color = ColorField(default='#FF0000')
 
     slug = models.SlugField(max_length=MAX_NAME_LENGTH, verbose_name="Слаг")
 

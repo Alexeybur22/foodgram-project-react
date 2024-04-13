@@ -1,5 +1,3 @@
-# flake8: noqa
-
 import os
 from pathlib import Path
 
@@ -11,7 +9,7 @@ DEBUG = os.getenv('DEBUG', False)
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '0').split(',')
 
-AUTH_USER_MODEL = "recipes.Profile"
+AUTH_USER_MODEL = 'recipes.Profile'
 
 INSTALLED_APPS = [
     'django.contrib.admin',

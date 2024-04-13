@@ -1,23 +1,23 @@
-from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from recipes.models import Ingredient, ProfileFavorite, Recipe, Tag
-from rest_framework import mixins, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from recipes.models import Ingredient
+from recipes.models import Profile as User
+from recipes.models import ProfileFavorite, Recipe, Tag
+
 from .filters import RecipeFilterSet
+from .mixins import TagIngredientMixin
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
                           TagSerializer)
-
-User = get_user_model()
 
 
 class ProfileViewSet(UserViewSet):
@@ -114,28 +114,21 @@ class ProfileViewSet(UserViewSet):
 
 
 class TagViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    TagIngredientMixin
 ):
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ("name",)
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
-    pagination_class = None
 
 
 class IngredientViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    TagIngredientMixin
 ):
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ("name",)
     queryset = Ingredient.objects.all()
-    pagination_class = None
 
     def get_serializer_class(self):
         if self.request.GET.get("recipe"):
             return IngredientinRecipeSerializer
-        else:
-            return IngredientSerializer
+        return IngredientSerializer
 
     def get_serializer_context(self):
         context = {"request": self.request}
@@ -163,12 +156,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=("post", "delete"),
         permission_classes=(IsAuthenticated,),
         serializer_class=ProfileFavoriteSerializer,
-        #        filter_backends=None
     )
     def favorite(self, request, pk):
         user = request.user
 
-        if not Recipe.objects.filter(id=pk).exists():
+        recipe = Recipe.objects.filter(id=pk).first()
+        if not recipe:
             message = {"error": "Несуществующий рецепт"}
             if request.method == "POST":
                 return Response(
@@ -181,7 +174,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-        recipe = Recipe.objects.get(id=pk)
         is_favorite = ProfileFavorite.objects.filter(
             user=user, recipe=recipe
         ).exists()
@@ -230,7 +222,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             fields=["id", "ingredients"]
         )
 
-        shopping_cart = dict()
+        shopping_cart = {}
 
         for recipe in serializer.data:
             ingredients = recipe["ingredients"]

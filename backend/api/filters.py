@@ -1,5 +1,7 @@
 import django_filters
 from django.db.models import Q
+from django.db.models.query import EmptyQuerySet
+
 from recipes.models import Recipe, Tag
 
 
@@ -29,20 +31,20 @@ class RecipeFilterSet(django_filters.FilterSet):
     def get_is_favorited(self, queryset, name, value):
         user_id = self.request.user.id
         if not user_id:
-            user_id = 0
+            return EmptyQuerySet()
         if value:
             return queryset.filter(is_favorited=user_id)
-        else:
-            return queryset.filter(~Q(is_favorited=user_id))
+
+        return queryset.filter(~Q(is_favorited=user_id))
 
     def get_is_in_shopping_cart(self, queryset, name, value):
         user_id = self.request.user.id
         if not user_id:
-            user_id = 0
+            return EmptyQuerySet()
         if value:
             return queryset.filter(is_in_shopping_cart=user_id)
-        else:
-            return queryset.filter(~Q(is_in_shopping_cart=user_id))
+
+        return queryset.filter(~Q(is_in_shopping_cart=user_id))
 
     class Meta:
         model = Recipe

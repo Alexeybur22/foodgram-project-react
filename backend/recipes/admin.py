@@ -6,7 +6,9 @@ from .models import (Ingredient, IngredientAmount, Profile, ProfileFavorite,
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    pass
+    list_display = (
+        "name", "slug"
+    )
 
 
 @admin.register(Ingredient)
