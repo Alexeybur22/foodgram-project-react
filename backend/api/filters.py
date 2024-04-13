@@ -1,6 +1,7 @@
 import django_filters
 from django.db.models import Q
 from django.db.models.query import EmptyQuerySet
+
 from recipes.models import Recipe, Tag
 
 

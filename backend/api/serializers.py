@@ -1,11 +1,12 @@
 from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+
 from recipes.models import Ingredient, IngredientAmount
 from recipes.models import Profile as User
 from recipes.models import ProfileFavorite, Recipe, RecipeTag, Tag
-from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
 from .constants import (MAX_EMAIL_LENGTH, MAX_FIRST_NAME_LENGTH,
                         MAX_LAST_NAME_LENGTH, MAX_USERNAME_LENGTH,
@@ -264,3 +265,72 @@ class ProfileFavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ("user", "recipe")
         model = ProfileFavorite
+
+
+class SubscriptionsSerializer(serializers.ModelSerializer):
+
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes'
+        )
+
+    def get_is_subscribed(self, obj):
+        return ProfileSerializer.get_is_subscribed(self, obj)
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        limit = request.GET.get('recipes_limit')
+        recipes = obj.recipes.all()
+        if limit:
+            recipes = recipes[:int(limit)]
+        serializer = RecipeReadSerializer(
+            recipes, many=True, read_only=True,
+            fields=["id", "image", "name", "cooking_time"]
+        )
+        return serializer.data
+
+
+class SubscribeAuthorSerializer(serializers.ModelSerializer):
+
+    email = serializers.ReadOnlyField()
+    username = serializers.ReadOnlyField()
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = RecipeReadSerializer(
+        many=True, read_only=True,
+        fields=["id", "image", "name", "cooking_time"]
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+        )
+
+    def validate(self, data):
+        if (
+            self.context['request'].user
+            == self.context['author']
+        ):
+            raise serializers.ValidationError(
+                {'errors': 'Ошибка при подписке.'}
+            )
+        return data
+
+    def get_is_subscribed(self, obj):
+        return ProfileSerializer.get_is_subscribed(self, obj)

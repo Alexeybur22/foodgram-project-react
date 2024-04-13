@@ -1,14 +1,15 @@
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
-from recipes.models import Ingredient
-from recipes.models import Profile as User
-from recipes.models import ProfileFavorite, Recipe, Tag
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from recipes.models import Ingredient
+from recipes.models import Profile as User
+from recipes.models import ProfileFavorite, Recipe, Tag
 
 from .filters import RecipeFilterSet
 from .mixins import TagIngredientMixin
@@ -16,6 +17,7 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
+                          SubscribeAuthorSerializer, SubscriptionsSerializer,
                           TagSerializer)
 
 
@@ -26,77 +28,52 @@ class ProfileViewSet(UserViewSet):
     serializer_class = ProfileSerializer
 
     @action(
-        detail=False,
-        methods=("get",),
+        detail=False, methods=['get'],
         permission_classes=(IsAuthenticated,),
-        pagination_class=LimitOffsetPagination,
+        pagination_class=LimitOffsetPagination
     )
     def subscriptions(self, request):
-        following = request.user.following.all()
-        page = self.paginate_queryset(following)
-
-        recipes_limit = request.query_params.get("recipes_limit")
-
-        serializer = self.get_serializer(
-            page, many=True, context={"user": request.user}, recipes=True
+        queryset = request.user.following.all()
+        page = self.paginate_queryset(queryset)
+        serializer = SubscriptionsSerializer(
+            page, many=True,
+            context={'request': request}
         )
-
-        if page is not None:
-            data = serializer.data
-            if recipes_limit:
-                for object in data:
-                    recipes = object["recipes"]
-                    if recipes:
-                        object["recipes"] = recipes[: int(recipes_limit)]
-            return self.get_paginated_response(data)
-
-        return Response(serializer.data)
+        return self.get_paginated_response(serializer.data)
 
     @action(
         detail=True,
         methods=["post", "delete"],
-        permission_classes=(IsAuthenticated,),
         http_method_names=["post", "delete"],
-        pagination_class=LimitOffsetPagination,
+        permission_classes=(IsAuthenticated,)
     )
     def subscribe(self, request, id):
-        follower = request.user
-        user_to_follow = get_object_or_404(User, id=id)
-        recipes_limit = request.query_params.get("recipes_limit")
+        author = get_object_or_404(User, id=id)
 
-        if follower.id == user_to_follow.id:
+        if request.method == 'POST':
+            serializer = SubscribeAuthorSerializer(
+                author, data=request.data,
+                context={
+                    "request": request,
+                    "author": author
+                }
+            )
+            serializer.is_valid(raise_exception=True)
+            request.user.following.add(author)
             return Response(
-                {"error": "Нельзя подписаться или отписаться от самого себя."},
-                status=status.HTTP_400_BAD_REQUEST,
+                serializer.data,
+                status=status.HTTP_201_CREATED
             )
 
-        if request.method == "POST":
-            if follower.following.filter(id=user_to_follow.id).exists():
-                return Response(
-                    {"error": "Вы уже подписаны на данного автора."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            follower.following.add(user_to_follow)
-            serializer = self.serializer_class(
-                user_to_follow, context={"user": request.user}, recipes=True
+        if request.method == 'DELETE':
+            get_object_or_404(
+                User, id=request.user.id, following=author
             )
-            data = serializer.data
-            recipes = data["recipes"]
-            if recipes_limit and recipes:
-                data["recipes"] = recipes[: int(recipes_limit)]
-
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        if follower.following.filter(id=user_to_follow.id).exists():
-            follower.following.remove(user_to_follow)
+            request.user.following.remove(author)
             return Response(
-                {"message": "Подписка успешно отменена."},
-                status=status.HTTP_204_NO_CONTENT,
+                {'detail': 'Вы отписались от данного пользователя.'},
+                status=status.HTTP_204_NO_CONTENT
             )
-        return Response(
-            {"error": "Невозможно отписаться от данного пользователя."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     @action(
         detail=False,

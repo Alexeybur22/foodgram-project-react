@@ -16,7 +16,3 @@ password: foodgram_project
 <li>Подписки на понравившихся авторов</li>
 
 </ul>
-
-Документация:
-
-https://kittygram-yndx.sytes.net/api/docs/

@@ -1,5 +1,6 @@
-from recipes.models import Ingredient, Recipe
 from rest_framework import serializers, status
+
+from recipes.models import Ingredient, Recipe
 
 
 class NotFoundError(serializers.ValidationError):

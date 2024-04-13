@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import Ingredient
 from rest_framework import mixins, viewsets
+
+from recipes.models import Ingredient
 
 
 class IngredientMixin:
