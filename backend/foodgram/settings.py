@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'djoser',
     'recipes.apps.RecipesConfig',
     'api.apps.ApiConfig',
-    'colorfield', 
+    'colorfield',
 ]
 
 MIDDLEWARE = [
