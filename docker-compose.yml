@@ -34,4 +34,4 @@ services:
     volumes:
       - static_foodgram:/staticfiles
       - media_foodgram:/media/
-      - ./docs/:/staticfiles/api/docs/
+      - ./docs/:/staticfiles/docs/
