@@ -16,15 +16,16 @@ services:
     image: schneidermark/foodgram_backend:latest
     env_file: ./.env
     volumes:
-      - static_volume_foodgram:/app/static/
-      - media_volume_foodgram:/media/
+      - static_volume_foodgram:/app/static
+      - media_volume_foodgram:/media
     depends_on:
       - db
   frontend:
     env_file: ./.env
     image: schneidermark/foodgram_frontend:latest
+    command: cp -r /app/build/. /frontend_static/
     volumes:
-      - ../frontend/:/app/result_build/
+      - static_volume_foodgram:/frontend_static
     depends_on:
       - backend
   gateway:
@@ -32,10 +33,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ../frontend/build:/usr/share/nginx/html/
-      - ../docs/:/usr/share/nginx/html/api/docs/
-      - static_volume_foodgram:/var/html/static/
-      - media_volume_foodgram:/media/
+      - static_volume_foodgram:/static
+      - media_volume_foodgram:/media
     depends_on:
       - db
       - backend
