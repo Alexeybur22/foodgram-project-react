@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from .filters import RecipeFilterSet
 from .mixins import TagIngredientMixin
-from .paginators import CustomPagination
+from .paginators import PageNumberAsLimitOffset
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
@@ -116,7 +116,7 @@ class IngredientViewSet(
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    pagination_class = CustomPagination
+    pagination_class = PageNumberAsLimitOffset
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeFilterSet
     permission_classes = (IsAuthorOrReadOnly,)

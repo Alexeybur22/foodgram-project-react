@@ -16,3 +16,8 @@ class CustomPagination(LimitOffsetPagination):
             return (page - 1) * limit
         except (KeyError, ValueError):
             return 0
+
+
+class PageNumberAsLimitOffset(PageNumberPagination):
+    page_size_query_param = "limit"
+    page_size = 6
