@@ -16,8 +16,8 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
-                          SubscribeAuthorSerializer, SubscriptionsSerializer,
-                          TagSerializer)
+                          ShoppingCartSerializer, SubscribeAuthorSerializer,
+                          SubscriptionsSerializer, TagSerializer)
 
 
 class ProfileViewSet(UserViewSet):
@@ -27,7 +27,7 @@ class ProfileViewSet(UserViewSet):
     serializer_class = ProfileSerializer
 
     @action(
-        detail=False, methods=['get'],
+        detail=False, methods=["get"],
         permission_classes=(IsAuthenticated,),
         pagination_class=LimitOffsetPagination
     )
@@ -36,7 +36,7 @@ class ProfileViewSet(UserViewSet):
         page = self.paginate_queryset(queryset)
         serializer = SubscriptionsSerializer(
             page, many=True,
-            context={'request': request}
+            context={"request": request}
         )
         return self.get_paginated_response(serializer.data)
 
@@ -49,7 +49,7 @@ class ProfileViewSet(UserViewSet):
     def subscribe(self, request, id):
         author = get_object_or_404(User, id=id)
 
-        if request.method == 'POST':
+        if request.method == "POST":
             serializer = SubscribeAuthorSerializer(
                 author, data=request.data,
                 context={
@@ -64,13 +64,13 @@ class ProfileViewSet(UserViewSet):
                 status=status.HTTP_201_CREATED
             )
 
-        if request.method == 'DELETE':
+        if request.method == "DELETE":
             get_object_or_404(
                 User, id=request.user.id, following=author
             )
             request.user.following.remove(author)
             return Response(
-                {'detail': 'Вы отписались от данного пользователя.'},
+                {"detail": "Вы отписались от данного пользователя."},
                 status=status.HTTP_204_NO_CONTENT
             )
 
@@ -126,6 +126,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         else:
             return RecipeWriteSerializer
 
+    @staticmethod
+    def post_or_delete(request, pk, serializer_class):
+
+        serializer = serializer_class(
+            data={"id": pk},
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        return serializer.validated_data
+
     @action(
         detail=True,
         methods=("post", "delete"),
@@ -143,11 +154,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     message,
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            else:
-                return Response(
-                    message,
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+            return Response(
+                message,
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         is_favorite = ProfileFavorite.objects.filter(
             user=user, recipe=recipe
@@ -225,48 +235,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=("post", "delete"),
+        methods=("post",),
         permission_classes=(IsAuthenticated,),
         serializer_class=RecipeReadSerializer,
     )
     def shopping_cart(self, request, pk):
 
-        if not Recipe.objects.filter(id=pk).exists():
-            message = {"error": "Несуществующий рецепт"}
-            if request.method == "POST":
-                return Response(
-                    message,
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            else:
-                return Response(
-                    message,
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+        recipe = self.post_or_delete(
+            request, pk, ShoppingCartSerializer
+        )
 
-        recipe = Recipe.objects.get(id=pk)
-        is_in_cart = request.user.shopping_cart.filter(id=pk).exists()
-
-        if request.method == "POST":
-            if is_in_cart:
-                return Response(
-                    {"error": "Рецепт уже в списке покупок."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            request.user.shopping_cart.add(pk)
-        else:
-            if not is_in_cart:
-                return Response(
-                    {"error": "Рецепта нет в списке покупок."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            request.user.shopping_cart.remove(pk)
-            return Response(
-                {"message": "Рецепт успешно удален из списка покупок"},
-                status=status.HTTP_204_NO_CONTENT,
-            )
+        request.user.shopping_cart.add(pk)
 
         serializer = RecipeReadSerializer(
             recipe, fields=["id", "name", "image", "cooking_time"]
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @shopping_cart.mapping.delete
+    def remove_from_shopping_cart(self, request, pk):
+
+        self.post_or_delete(
+            request, pk, ShoppingCartSerializer
+        )
+
+        request.user.shopping_cart.remove(pk)
+
+        return Response(
+            {"message": "Рецепт успешно удален из списка покупок"},
+            status=status.HTTP_204_NO_CONTENT,
+        )

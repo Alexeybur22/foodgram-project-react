@@ -1,4 +1,5 @@
 from django.core.validators import RegexValidator
+from django.db import transaction
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from recipes.models import Ingredient, IngredientAmount
@@ -42,7 +43,7 @@ class ProfileSerializer(UserSerializer):
         extra_kwargs = {"password": {"write_only": True}}
 
     def get_is_subscribed(self, obj):
-        request = self.context.get("request", None)
+        request = self.context.get("request")
         if request:
             current_user = request.user
         else:
@@ -218,6 +219,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         IngredientAmount.objects.bulk_create(bulk_ingredientamount_list)
         RecipeTag.objects.bulk_create(bulk_recipetag_list)
 
+    @transaction.atomic
     def create(self, validated_data):
         ingredients = validated_data.pop("ingredients", None)
         tags = validated_data.pop("tags", None)
@@ -333,3 +335,39 @@ class SubscribeAuthorSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         return ProfileSerializer.get_is_subscribed(self, obj)
+
+
+class ShoppingCartSerializer(serializers.Serializer):
+
+    id = serializers.IntegerField()
+
+    def validate(self, data):
+
+        pk = data.get("id")
+
+        request = self.context["request"]
+        user = request.user
+
+        recipe = Recipe.objects.filter(id=pk).first()
+        if not recipe:
+            message = {"error": "Несуществующий рецепт"}
+            if request.method == "POST":
+                raise serializers.ValidationError(
+                    message,
+                )
+            raise serializers.ValidationError(
+                message,
+            )
+        is_in_cart = user.shopping_cart.filter(id=pk).exists()
+
+        if request.method == "POST":
+            if is_in_cart:
+                raise serializers.ValidationError(
+                    {"error": "Рецепт уже в списке покупок."},
+                )
+        else:
+            if not is_in_cart:
+                raise serializers.ValidationError(
+                    {"error": "Рецепта нет в списке покупок."},
+                )
+        return recipe
