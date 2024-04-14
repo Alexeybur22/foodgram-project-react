@@ -265,7 +265,40 @@ class ProfileFavoriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ("user", "recipe")
+        extra_kwargs = {
+            "recipe": {
+                "required": False
+            }
+        }
         model = ProfileFavorite
+
+    def validate(self, data):
+        user = data.get("user")
+        pk = self.context.get("id")
+        request = self.context.get("request")
+        recipe = Recipe.objects.filter(id=pk).first()
+        if not recipe:
+            raise serializers.ValidationError(
+                {"error": "Несуществующий рецепт"}
+            )
+        is_favorite = ProfileFavorite.objects.filter(
+            user=user, recipe=recipe
+        ).exists()
+
+        if request.method == "POST":
+            if is_favorite:
+                raise serializers.ValidationError(
+                    {"error": "Невозможно добавить рецепт в избранное."}
+                )
+        else:
+            if not is_favorite:
+                raise serializers.ValidationError(
+                    {
+                        "error":
+                        "Невозможно удалить рецепт из избранного."
+                    }
+                )
+        return recipe
 
 
 class SubscriptionsSerializer(serializers.ModelSerializer):

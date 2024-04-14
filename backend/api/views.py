@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from recipes.models import Ingredient
 from recipes.models import Profile as User
-from recipes.models import ProfileFavorite, Recipe, Tag
+from recipes.models import Recipe, Tag
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -127,11 +127,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeWriteSerializer
 
     @staticmethod
-    def post_or_delete(request, pk, serializer_class):
-
+    def post_or_delete(
+        request, pk, serializer_class,
+        data=None, context=None
+    ):
+        if not data:
+            data = {"id": pk}
+        if not context:
+            context = {"request": request}
         serializer = serializer_class(
-            data={"id": pk},
-            context={"request": request}
+            data=data,
+            context=context
         )
         serializer.is_valid(raise_exception=True)
 
@@ -139,61 +145,56 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=("post", "delete"),
+        methods=("post",),
         permission_classes=(IsAuthenticated,),
         serializer_class=ProfileFavoriteSerializer,
     )
     def favorite(self, request, pk):
         user = request.user
 
-        recipe = Recipe.objects.filter(id=pk).first()
-        if not recipe:
-            message = {"error": "Несуществующий рецепт"}
-            if request.method == "POST":
-                return Response(
-                    message,
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            return Response(
-                message,
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        is_favorite = ProfileFavorite.objects.filter(
-            user=user, recipe=recipe
-        ).exists()
-
-        serializer = self.serializer_class(
-            data={"user": user.pk, "recipe": recipe.pk}
+        recipe = self.post_or_delete(
+            request, pk, self.serializer_class,
+            data={"user": user.pk},
+            context={
+                "id": pk,
+                "request": request
+            }
         )
-        serializer.is_valid(raise_exception=True)
 
-        if request.method == "POST":
-            if is_favorite:
-                return Response(
-                    {"error": "Невозможно добавить рецепт в избранное."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user.favorite_recipes.add(recipe)
+        user.favorite_recipes.add(recipe)
 
-            message_serializer = RecipeReadSerializer(
-                recipe, fields=["id", "name", "image", "cooking_time"]
-            )
-            return Response(
-                message_serializer.data, status=status.HTTP_201_CREATED
-            )
+        message_serializer = RecipeReadSerializer(
+            recipe, fields=["id", "name", "image", "cooking_time"]
+        )
+        return Response(
+            message_serializer.data, status=status.HTTP_201_CREATED
+        )
 
-        if not is_favorite:
-            return Response(
-                {"error": "Невозможно удалить рецепт из избранного."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    @favorite.mapping.delete
+    def delete_from_favorite(self, request, pk):
+        user = request.user
+
+        recipe = self.post_or_delete(
+            request, pk, self.serializer_class,
+            data={"user": user.pk},
+            context={
+                "id": pk,
+                "request": request
+            }
+        )
 
         user.favorite_recipes.remove(recipe)
+
         return Response(
             {"message": "Рецепт успешно удалён из избранного."},
             status=status.HTTP_204_NO_CONTENT,
         )
+
+#        user.favorite_recipes.remove(recipe)
+#        return Response(
+#            {"message": "Рецепт успешно удалён из избранного."},
+#            status=status.HTTP_204_NO_CONTENT,
+#        )
 
     @action(
         detail=False,
