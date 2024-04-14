@@ -26,6 +26,7 @@ class ProfileViewSet(UserViewSet):
     http_method_names = ["get", "post"]
     pagination_class = LimitOffsetPagination
     serializer_class = ProfileSerializer
+    permission_classes = (IsAuthorOrReadOnly,)
 
     @action(
         detail=False, methods=["get"],
