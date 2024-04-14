@@ -33,7 +33,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - static_volume_foodgram:/static
+      - static_volume_foodgram:/var/html/static/
       - media_volume_foodgram:/media
     depends_on:
       - db
