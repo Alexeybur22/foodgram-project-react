@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from .filters import RecipeFilterSet
 from .mixins import TagIngredientMixin
 from .paginators import PageNumberAsLimitOffset
-from .permissions import IsAuthorOrReadOnly
+from .permissions import IsAuthorOrReadOnly, IsUserOrReadOnly
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
                           ProfileFavoriteSerializer, ProfileSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer,
@@ -26,7 +26,7 @@ class ProfileViewSet(UserViewSet):
     http_method_names = ["get", "post"]
     pagination_class = LimitOffsetPagination
     serializer_class = ProfileSerializer
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (IsUserOrReadOnly,)
 
     @action(
         detail=False, methods=["get"],
