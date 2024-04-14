@@ -274,21 +274,21 @@ class SubscriptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes'
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+            "recipes"
         )
 
     def get_is_subscribed(self, obj):
         return ProfileSerializer.get_is_subscribed(self, obj)
 
     def get_recipes(self, obj):
-        request = self.context.get('request')
-        limit = request.GET.get('recipes_limit')
+        request = self.context.get("request")
+        limit = request.GET.get("recipes_limit")
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
@@ -312,22 +312,22 @@ class SubscribeAuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes',
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+            "recipes",
         )
 
     def validate(self, data):
         if (
-            self.context['request'].user
-            == self.context['author']
+            self.context["request"].user
+            == self.context["author"]
         ):
             raise serializers.ValidationError(
-                {'errors': 'Ошибка при подписке.'}
+                {"errors": "Ошибка при подписке."}
             )
         return data
 

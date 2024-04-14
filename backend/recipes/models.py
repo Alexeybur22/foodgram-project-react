@@ -117,7 +117,7 @@ class Tag(models.Model):
         max_length=MAX_NAME_LENGTH, verbose_name="Название"
     )
 
-    color = ColorField(default='#FF0000')
+    color = ColorField(default="#FF0000")
 
     slug = models.SlugField(max_length=MAX_NAME_LENGTH, verbose_name="Слаг")
 
