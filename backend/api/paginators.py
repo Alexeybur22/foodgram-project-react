@@ -1,4 +1,5 @@
-from rest_framework.pagination import LimitOffsetPagination, _positive_int
+from rest_framework.pagination import (LimitOffsetPagination,
+                                       PageNumberPagination, _positive_int)
 
 
 class CustomPagination(LimitOffsetPagination):
