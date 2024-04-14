@@ -35,7 +35,7 @@ services:
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_volume_foodgram:/var/html/static/
-      - media_volume_foodgram:/var/html/media/
+      - media_volume_foodgram:/media/
     depends_on:
       - db
       - backend
