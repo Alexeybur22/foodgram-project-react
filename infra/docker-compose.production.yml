@@ -23,7 +23,6 @@ services:
   frontend:
     env_file: ./.env
     image: schneidermark/foodgram_frontend:latest
-    command: cp -r /app/build/. /frontend_static/
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
