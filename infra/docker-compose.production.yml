@@ -25,7 +25,7 @@ services:
     image: schneidermark/foodgram_frontend:latest
     command: cp -r /app/build/. /frontend_static/
     volumes:
-      - static_volume_foodgram:/frontend_static
+      - ../frontend/:/app/result_build/
     depends_on:
       - backend
   gateway:
