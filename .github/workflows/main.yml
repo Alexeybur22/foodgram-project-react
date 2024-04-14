@@ -77,9 +77,9 @@ jobs:
       - name: Push to DockerHub
         uses: docker/build-push-action@v4
         with:
-          context: infra
+          context: ./infra/
           push: true
-          tags: schneidermark/foodgram_gateway:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_gateway:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -113,7 +113,7 @@ jobs:
           sudo docker compose -f docker-compose.production.yml up -d
           sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
           sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
-          sudo docker compose -f docker-compose.production.yml exec backend cp -r ./collected_static/. ../app/static/ 
+          sudo docker compose -f docker-compose.production.yml exec backend cp -r ./collected_static/. /backend_static/static/
 
 
   send_message:
