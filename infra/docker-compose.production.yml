@@ -16,8 +16,8 @@ services:
     image: schneidermark/foodgram_backend:latest
     env_file: ./.env
     volumes:
-      - static_volume_foodgram:/app/static
-      - media_volume_foodgram:/media
+      - static_volume_foodgram:/app/static/
+      - media_volume_foodgram:/app/media/
     depends_on:
       - db
   frontend:
