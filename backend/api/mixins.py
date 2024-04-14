@@ -1,6 +1,5 @@
-from django_filters.rest_framework import DjangoFilterBackend
 from recipes.models import Ingredient
-from rest_framework import mixins, viewsets
+from rest_framework import filters, mixins, viewsets
 
 
 class IngredientMixin:
@@ -17,6 +16,6 @@ class IngredientMixin:
 class TagIngredientMixin(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ("name",)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
     pagination_class = None
