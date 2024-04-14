@@ -191,12 +191,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_204_NO_CONTENT,
         )
 
-#        user.favorite_recipes.remove(recipe)
-#        return Response(
-#            {"message": "Рецепт успешно удалён из избранного."},
-#            status=status.HTTP_204_NO_CONTENT,
-#        )
-
     @action(
         detail=False,
         methods=("get",),

@@ -3,6 +3,7 @@ from rest_framework.pagination import LimitOffsetPagination, _positive_int
 
 class CustomPagination(LimitOffsetPagination):
     offset_query_param = 'page'
+    limit_query_param = 'limit'
 
     def get_offset(self, request):
         try:
@@ -12,6 +13,6 @@ class CustomPagination(LimitOffsetPagination):
             limit = _positive_int(
                 request.query_params[self.limit_query_param],
             )
-            return page * limit
+            return (page - 1) * limit
         except (KeyError, ValueError):
             return 0
