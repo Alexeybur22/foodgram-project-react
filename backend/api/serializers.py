@@ -226,7 +226,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         empty_values(ingredients, tags)
         repetitive_values(ingredients, tags)
 
-        request = self.context.get("request", None)
+        request = self.context.get("request")
         validated_data["author_id"] = request.user.id
         recipe = Recipe.objects.create(**validated_data)
 
@@ -234,6 +234,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
         return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         ingredients = validated_data.pop("ingredients", None)
         tags = validated_data.pop("tags", None)
@@ -290,14 +291,14 @@ class ProfileFavoriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"error": "Невозможно добавить рецепт в избранное."}
                 )
-        else:
-            if not is_favorite:
-                raise serializers.ValidationError(
-                    {
-                        "error":
-                        "Невозможно удалить рецепт из избранного."
-                    }
-                )
+
+        elif not is_favorite:
+            raise serializers.ValidationError(
+                {
+                    "error":
+                    "Невозможно удалить рецепт из избранного."
+                }
+            )
         return recipe
 
 
@@ -398,9 +399,9 @@ class ShoppingCartSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"error": "Рецепт уже в списке покупок."},
                 )
-        else:
-            if not is_in_cart:
-                raise serializers.ValidationError(
-                    {"error": "Рецепта нет в списке покупок."},
-                )
+
+        elif not is_in_cart:
+            raise serializers.ValidationError(
+                {"error": "Рецепта нет в списке покупок."},
+            )
         return recipe

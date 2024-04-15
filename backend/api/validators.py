@@ -4,7 +4,7 @@ from rest_framework import serializers, status
 
 class NotFoundError(serializers.ValidationError):
     def __init__(self, detail):
-        super().__init__(detail, code=404)
+        super().__init__(detail, code=status.HTTP_404_NOT_FOUND)
 
 
 def repetitive_values(ingredients, tags):

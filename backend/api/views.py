@@ -4,7 +4,7 @@ from djoser.views import UserViewSet
 from recipes.models import Ingredient
 from recipes.models import Profile as User
 from recipes.models import Recipe, Tag
-from rest_framework import status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -120,13 +120,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberAsLimitOffset
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeFilterSet
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^ingredients__name',)
     permission_classes = (IsAuthorOrReadOnly,)
 
     def get_serializer_class(self):
         if self.action in ("list", "retrieve"):
             return RecipeReadSerializer
-        else:
-            return RecipeWriteSerializer
+        return RecipeWriteSerializer
 
     @staticmethod
     def post_or_delete(
