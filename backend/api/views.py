@@ -104,7 +104,7 @@ class IngredientViewSet(
 ):
     queryset = Ingredient.objects.all()
     filter_backends = (DjangoFilterBackend, filters.SearchFilter,)
-    filterset_fields = ("^name",)
+    filterset_fields = ("name",)
 
     def get_serializer_class(self):
         if self.request.GET.get("recipe"):
