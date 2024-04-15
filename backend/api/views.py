@@ -116,7 +116,7 @@ class IngredientViewSet(
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
+    queryset = Recipe.objects.all().order_by('-pub_date')
     pagination_class = PageNumberAsLimitOffset
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeFilterSet
