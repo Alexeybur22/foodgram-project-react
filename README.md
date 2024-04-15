@@ -4,6 +4,8 @@ https://kittygram-yndx.sytes.net/ (Да, название обманчиво :) 
 
 superuser:
 
+email: schneider.mark14@gmail.com
+
 login: admin_foodgram
 
 password: foodgram_project
