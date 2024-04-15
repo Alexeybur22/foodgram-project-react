@@ -122,8 +122,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberAsLimitOffset
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeFilterSet
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^ingredients__name',)
     permission_classes = (IsAuthorOrReadOnly,)
 
     def get_serializer_class(self):
