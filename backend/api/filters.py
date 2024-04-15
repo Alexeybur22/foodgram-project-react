@@ -2,6 +2,7 @@ import django_filters
 from django.db.models import Q
 from django.db.models.query import EmptyQuerySet
 from recipes.models import Recipe, Tag
+from rest_framework import filters
 
 
 def get_tag_choices():
@@ -54,3 +55,7 @@ class RecipeFilterSet(django_filters.FilterSet):
             "tags",
             "name"
         )
+
+
+class IngredientSearchFilter(filters.SearchFilter):
+    search_param = "name"

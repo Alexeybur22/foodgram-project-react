@@ -1,7 +1,6 @@
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from recipes.models import Ingredient
 from recipes.models import Profile as User
@@ -12,7 +11,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .filters import RecipeFilterSet
+from .filters import IngredientSearchFilter, RecipeFilterSet
 from .mixins import TagIngredientMixin
 from .paginators import PageNumberAsLimitOffset
 from .permissions import IsAuthorOrReadOnly, IsUserOrReadOnly
@@ -103,8 +102,7 @@ class IngredientViewSet(
     TagIngredientMixin
 ):
     queryset = Ingredient.objects.all()
-    filter_backends = (DjangoFilterBackend, filters.SearchFilter,)
-    filterset_fields = ("name",)
+    filter_backends = (IngredientSearchFilter,)
 
     def get_serializer_class(self):
         if self.request.GET.get("recipe"):
