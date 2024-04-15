@@ -1,5 +1,7 @@
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from recipes.models import Ingredient
 from recipes.models import Profile as User
@@ -101,6 +103,8 @@ class IngredientViewSet(
     TagIngredientMixin
 ):
     queryset = Ingredient.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter,)
+    filterset_fields = ("^name",)
 
     def get_serializer_class(self):
         if self.request.GET.get("recipe"):
@@ -199,29 +203,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
     )
     def download_shopping_cart(self, request):
-        serializer = RecipeReadSerializer(
-            request.user.shopping_cart.all(),
-            many=True,
-            fields=["id", "ingredients"]
-        )
 
-        shopping_cart = {}
-
-        for recipe in serializer.data:
-            ingredients = recipe["ingredients"]
-
-            for ingredient in ingredients:
-                name = (
-                    f"{ingredient.get('name')}"
-                    f"({ingredient.get('measurement_unit')})"
-                )
-                shopping_cart[name] = shopping_cart.get(
-                    ingredient.get(name), 0
-                ) + ingredient.get("amount")
+        ingredients = request.user.shopping_cart.values(
+            "ingredients__name", "ingredients__measurement_unit"
+        ).annotate(
+            amount=Sum("ingredientamount__amount")
+        ).order_by()
 
         content = ""
-        for key, value in shopping_cart.items():
-            content += f"{key} — {value}\n"
+
+        for ingredient in ingredients:
+            name = ingredient["ingredients__name"]
+            unit = ingredient["ingredients__measurement_unit"]
+            amount = ingredient["amount"]
+
+            content += f"{name} ({unit}) — {amount}\n"
 
         filename = "shopping_cart.txt"
         response = HttpResponse(content, content_type="text/plain")
