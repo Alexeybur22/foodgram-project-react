@@ -5,7 +5,7 @@ from djoser.views import UserViewSet
 from recipes.models import Ingredient
 from recipes.models import Profile as User
 from recipes.models import Recipe, Tag
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
